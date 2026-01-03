@@ -1,0 +1,6 @@
+{
+    "scripts": {
+        "frontend": "cd frontend/greet-app && npm run dev",
+        "backend": "cd backend && cargo run"
+    }
+}
