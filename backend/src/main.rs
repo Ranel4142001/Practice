@@ -2,17 +2,22 @@ use axum::{
     routing::{get, post},
     Json, Router,
     http::{StatusCode, header, Method},
+    Extension,
 };
 use tower_http::cors::{CorsLayer, Any};
 use tokio::net::TcpListener;
+use mysql::*;
 
 // Declare modules (folders)
 mod greet;
 mod users;
+mod db; // new module for database setup
 
 // Import handler functions
 use greet::handler::greet;
 use users::handler::list_users;
+// Import centralized DB initializer
+use db::init_pool;
 
 /// This function handles requests to `/`
 /// When you open http://localhost:3000 in the browser,
@@ -34,6 +39,11 @@ async fn main() {
         .allow_headers([header::CONTENT_TYPE]); // Allowed headers
 
     // -----------------------------
+    // Initialize DB pool once
+    // -----------------------------
+    let pool = init_pool();
+
+    // -----------------------------
     // Router configuration
     // -----------------------------
     let app = Router::new()
@@ -41,11 +51,14 @@ async fn main() {
         .route("/", get(root))
 
         // API routes
-        .route("/greet", post(greet))   // POST /greet
+        .route("/greet", post(greet))     // POST /greet
         .route("/users", get(list_users)) // GET /users
 
         // Apply CORS middleware
-        .layer(cors);
+        .layer(cors)
+
+        // Share DB pool with all handlers
+        .layer(Extension(pool));
 
     println!("🚀 Server running on http://localhost:3000");
 

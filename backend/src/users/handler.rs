@@ -1,6 +1,14 @@
+//Bring in Axum tools
 use axum::{Json, http::StatusCode};
+
+//Bring in MySQL Pool type
 use mysql::*;
+
+// Import common MySQL traits (e.g. Queryable, FromRow) 
+// so we can run queries like exec_drop and query_map
 use mysql::prelude::*;
+
+//Bring in our request and response data models
 use crate::users::model::User;
 
 /// Handles GET requests to `/users`

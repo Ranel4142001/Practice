@@ -1,10 +1,11 @@
-// Bring in Axum tools:
-// - Json: lets us read JSON from requests and send JSON back
-// - StatusCode: lets us send proper HTTP status codes (like 200, 500, etc.)
-use axum::{Json, http::StatusCode};
+// Bring in Axum tools
+use axum::{Json, Extension, http::StatusCode};
 
-// Bring in MySQL crate and helper traits for database work
-use mysql::*;
+// Bring in MySQL Pool type
+use mysql::Pool;
+
+// Import common MySQL traits (e.g. Queryable, FromRow) 
+// so we can run queries like exec_drop and query_map
 use mysql::prelude::*;
 
 // Bring in our request and response data models
@@ -22,37 +23,13 @@ use crate::greet::model::{GreetRequest, GreetResponse};
 ///   "message": "Hello, Ranel! Welcome 👋"
 /// }
 pub async fn greet(
+    // Get the shared DB pool from app state
+    Extension(pool): Extension<Pool>,
     // Take the JSON body from the request and turn it into a GreetRequest struct
     Json(payload): Json<GreetRequest>,
 ) -> Result<Json<GreetResponse>, (StatusCode, String)> {
-
     // -----------------------------
-    // Database connection details
-    // -----------------------------
-    // Format: mysql://username:password@host:port/database
-    let url = "mysql://root:Latterdaysaints1401!@localhost:3306/greeting_app";
-
-    // -----------------------------
-    // Turn the connection string into MySQL options
-    // -----------------------------
-    let opts = Opts::from_url(url)
-        .map_err(|e| (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Invalid DB URL: {}", e),
-        ))?;
-
-    // -----------------------------
-    // Create a pool of database connections
-    // -----------------------------
-    // A pool lets us reuse connections instead of opening a new one each time
-    let pool = Pool::new(opts)
-        .map_err(|e| (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB Pool error: {}", e),
-        ))?;
-
-    // -----------------------------
-    // Get one connection from the pool
+    // Get a connection from the pool
     // -----------------------------
     let mut conn = pool.get_conn()
         .map_err(|e| (
@@ -63,7 +40,6 @@ pub async fn greet(
     // -----------------------------
     // Save the user's name into the database
     // -----------------------------
-    // `?` is a placeholder so we don’t risk SQL injection
     conn.exec_drop(
         "INSERT INTO users (name) VALUES (?)",
         (payload.name.clone(),),
